@@ -121,7 +121,7 @@ class _BatteryConfigScreenState extends State<BatteryConfigScreen> {
         ),
         // FIX 3: Using 'value' as per standard Flutter, but if your IDE 
         // specifically requested 'initialValue', keep that.
-        value: current,
+        initialValue: current,
         items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         onChanged: onChanged,
       ),

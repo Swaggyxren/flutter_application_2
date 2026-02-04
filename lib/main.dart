@@ -176,7 +176,7 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                                           color: isRooted ? Colors.green : Colors.red,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: (isRooted ? Colors.green : Colors.red).withOpacity(0.4),
+                                              color: (isRooted ? Colors.green : Colors.red).withValues(alpha: 0.4),
                                               blurRadius: _pulseController.value * 12,
                                               spreadRadius: 2,
                                             )
@@ -196,7 +196,7 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
                           ),
                           child: ShaderMask(
                             shaderCallback: (rect) => const LinearGradient(
