@@ -6,8 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.flutter_application_2"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.xiiann.ledsync"
+
+    // Required by battery_plus, device_info_plus, shared_preferences_android, and androidx.core 1.16.0
+    compileSdk = 36
+
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -20,12 +23,14 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.flutter_application_2"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.xiiann.ledsync"
+
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+
+        // You can keep this at 34 (no new runtime behavior),
+        // compileSdk is what fixes the build errors.
+        targetSdk = 34
+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

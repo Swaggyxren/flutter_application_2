@@ -3,6 +3,7 @@ import 'app_drawer.dart';
 import 'led_menu.dart';
 import 'root_logic.dart';
 import 'battery_listener.dart';
+import 'notif_permission.dart'; // ✅ add this
 
 void main() => runApp(const LedApp());
 
@@ -24,13 +25,16 @@ class LedEffectsHome extends StatefulWidget {
   State<LedEffectsHome> createState() => _LedEffectsHomeState();
 }
 
-class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProviderStateMixin {
+class _LedEffectsHomeState extends State<LedEffectsHome>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool isSwitched = true;
   late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -38,12 +42,26 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
 
     RootLogic.initializeHardware();
     BatteryListener.listen();
+
+    // ✅ Ask permission after first frame (so dialog won't crash context)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotifPermission.ensureEnabled(context);
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     super.dispose();
+  }
+
+  // ✅ When returning from Settings, re-check
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotifPermission.ensureEnabled(context);
+    }
   }
 
   // Helper for Version + Codename
@@ -72,6 +90,8 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
 
   void _toggleMasterPower(bool value) async {
     setState(() => isSwitched = value);
+    RootLogic.masterEnabled = value;
+
     if (!value) {
       await RootLogic.turnOffAll();
     } else {
@@ -86,7 +106,10 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text("Led Effects", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "LedSync",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         actions: [
           Switch(
             value: isSwitched,
@@ -106,8 +129,11 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Current Status:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              
+              const Text(
+                "Current Status:",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+
               FutureBuilder<List<dynamic>>(
                 future: Future.wait([RootLogic.isRooted(), RootLogic.getConfig()]),
                 builder: (context, snapshot) {
@@ -116,20 +142,24 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                   if (snapshot.hasData) {
                     bool rooted = snapshot.data![0] ?? false;
                     var config = snapshot.data![1];
-                    if (!rooted) { 
-                      msg = "Root Not Granted"; 
-                      color = Colors.red; 
-                    } else if (config == null) { 
-                      msg = "No Led config found"; 
-                      color = Colors.orange; 
-                    } else { 
-                      msg = "Ready to use"; 
-                      color = Colors.green; 
+                    if (!rooted) {
+                      msg = "Root Not Granted";
+                      color = Colors.red;
+                    } else if (config == null) {
+                      msg = "No Led config found";
+                      color = Colors.orange;
+                    } else {
+                      msg = "Ready to use";
+                      color = Colors.green;
                     }
                   }
-                  return Text(msg, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.bold));
+                  return Text(
+                    msg,
+                    style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.bold),
+                  );
                 },
               ),
+
               const SizedBox(height: 10),
 
               // 1. DEVICE INFO CARD
@@ -156,27 +186,42 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(device['model'] ?? "Unknown", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                              Text(
+                                device['model'] ?? "Unknown",
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                              ),
                               const SizedBox(height: 4),
-                              Text(_getAndroidDisplayVersion(device['version'] ?? "Android"), 
-                                style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                              Text(
+                                _getAndroidDisplayVersion(device['version'] ?? "Android"),
+                                style: const TextStyle(fontSize: 15, color: Colors.black54),
+                              ),
                               const SizedBox(height: 4),
-                              Text(device['kernel'] ?? "", style: const TextStyle(fontSize: 10, color: Colors.black38), maxLines: 2, overflow: TextOverflow.ellipsis),
+                              Text(
+                                device['kernel'] ?? "",
+                                style: const TextStyle(fontSize: 10, color: Colors.black38),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const Spacer(),
                               Row(
                                 children: [
-                                  const Text("Root Status: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                  const Text(
+                                    "Root Status: ",
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                  ),
                                   AnimatedBuilder(
                                     animation: _pulseController,
                                     builder: (context, child) {
                                       return Container(
-                                        width: 12, height: 12,
+                                        width: 12,
+                                        height: 12,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: isRooted ? Colors.green : Colors.red,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: (isRooted ? Colors.green : Colors.red).withValues(alpha: 0.4),
+                                              color: (isRooted ? Colors.green : Colors.red)
+                                                  .withValues(alpha: 0.4),
                                               blurRadius: _pulseController.value * 12,
                                               spreadRadius: 2,
                                             )
@@ -190,13 +235,20 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                             ],
                           ),
                         ),
+
                         // THE PREVIEW BOX (Kept exactly as requested)
                         Container(
-                          width: 115, height: double.infinity,
+                          width: 115,
+                          height: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                              )
+                            ],
                           ),
                           child: ShaderMask(
                             shaderCallback: (rect) => const LinearGradient(
@@ -223,18 +275,22 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                   );
                 },
               ),
-              
+
               const SizedBox(height: 15),
 
               GestureDetector(
                 onTap: () => AppDrawerPopup.show(context),
                 child: Container(
-                  height: 55, width: double.infinity,
-                  decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(20)),
+                  height: 55,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: const Icon(Icons.menu, color: Colors.black54, size: 30),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
 
               Row(
@@ -248,8 +304,8 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                           title: "Root Manager",
                           status: info?.name ?? "Detecting...",
                           icon: (info?.iconPath != null && info!.iconPath.isNotEmpty)
-                            ? Image.asset(info.iconPath, width: 30)
-                            : const Icon(Icons.shield_outlined, size: 30, color: Colors.black54),
+                              ? Image.asset(info.iconPath, width: 30)
+                              : const Icon(Icons.shield_outlined, size: 30, color: Colors.black54),
                         );
                       },
                     ),
@@ -263,6 +319,27 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
                     ),
                   ),
                 ],
+              ),
+
+              // ✅ Push footer to bottom
+              const Spacer(),
+
+              // ✅ Footer text row
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: const [
+                    Text(
+                      "Xi'annnnnn/@kasajin001",
+                      style: TextStyle(fontSize: 12, color: Colors.black38, fontWeight: FontWeight.w600),
+                    ),
+                    Spacer(),
+                    Text(
+                      "Initial Release Expect Bugs",
+                      style: TextStyle(fontSize: 12, color: Colors.black38, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -279,7 +356,8 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
 
   Widget _buildStatusCard({required String title, required String status, required Widget icon}) {
     return Container(
-      height: 140, padding: const EdgeInsets.all(20),
+      height: 140,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(25)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +367,10 @@ class _LedEffectsHomeState extends State<LedEffectsHome> with SingleTickerProvid
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
+              ),
               Text(status, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+
 import 'battery_config_screen.dart';
 import 'notification_config_screen.dart';
 
@@ -18,8 +19,8 @@ class AppDrawerPopup {
             child: Material(
               color: Colors.transparent,
               child: Container(
-                // Compact height for just two main options
-                height: MediaQuery.of(context).size.height * 0.35, 
+                // Compact height for just two options
+                height: MediaQuery.of(context).size.height * 0.35,
                 width: MediaQuery.of(context).size.width * 0.75,
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(240),
@@ -28,13 +29,37 @@ class AppDrawerPopup {
                 child: Column(
                   children: [
                     const SizedBox(height: 25),
-                    const Text("LED Configuration", 
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                    const Text(
+                      "LED Configuration",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
                     const SizedBox(height: 20),
-                    _buildTile(context, "App Alerts", Icons.notifications, const NotificationConfigScreen()),
-                    _buildTile(context, "Battery Config", Icons.battery_charging_full, const BatteryConfigScreen()),
+
+                    _buildTile(
+                      context,
+                      title: "App Alerts",
+                      subtitle: "Per-app notification LED patterns",
+                      icon: Icons.notifications,
+                      screen: const NotificationConfigScreen(),
+                    ),
+
+                    _buildTile(
+                      context,
+                      title: "Battery Config",
+                      subtitle: "Low / critical thresholds & effects",
+                      icon: Icons.battery_charging_full,
+                      screen: const BatteryConfigScreen(),
+                    ),
+
                     const Spacer(),
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close")),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
+                    ),
                     const SizedBox(height: 10),
                   ],
                 ),
@@ -46,14 +71,63 @@ class AppDrawerPopup {
     );
   }
 
-  static Widget _buildTile(BuildContext context, String title, IconData icon, Widget screen) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.blueAccent),
-      title: Text(title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500)),
-      onTap: () {
-        Navigator.pop(context);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
-      },
+  static Widget _buildTile(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Widget screen,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          Navigator.pop(context); // close popup first
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => screen),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(220),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.blueAccent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.black45),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
