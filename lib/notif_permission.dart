@@ -39,7 +39,6 @@ class NotifPermission {
   static Future<void> _waitUntilEnabled(BuildContext context) async {
     if (!context.mounted) return;
 
-    // show loading (blurred) overlay
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -75,13 +74,14 @@ class NotifPermission {
       },
     );
 
-    // poll until enabled
     Timer? timer;
     timer = Timer.periodic(const Duration(milliseconds: 450), (_) async {
       final ok = await isEnabled();
       if (ok) {
         timer?.cancel();
-        if (context.mounted) Navigator.of(context, rootNavigator: true).pop(); // close loading
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
       }
     });
   }
@@ -91,7 +91,6 @@ class NotifPermission {
     final ok = await isEnabled();
     if (ok || !context.mounted) return;
 
-    // Ask dialog (blur background)
     await showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -131,7 +130,6 @@ class NotifPermission {
                       onPressed: () async {
                         Navigator.of(ctx, rootNavigator: true).pop();
                         await openSettings();
-                        // show loading until enabled
                         await _waitUntilEnabled(context);
                       },
                       child: const Text("Open Settings"),
